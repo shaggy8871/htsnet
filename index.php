@@ -175,14 +175,17 @@
 				margin: 40px 0 0 10px;
 			}
 			.itm {
-				margin: -1px 0 0 1px;
-				padding: 0 1px;
-				width: 129px;
-				height: 74px;
+				margin: 2px 0 0 3px;
+				border: 1px solid #eaf2f8;
+				width: 127px;
+				height: 91px;
 				float: left;
-				border: 0px solid #000;
 				list-style: none;
 				text-align: center;
+				cursor: pointer;
+			}
+			.helperouter {
+				height: 68px;
 			}
 			.helper {
 				display: inline-block;
@@ -196,11 +199,12 @@
 				border-bottom: 1px solid #bbb;
 				height: 22px;
 				background-color: #fff;
-				margin-left: 2px;
-				margin-top: -3px;
 				font-family: Arial;
 				font-size: 10px;
 				position: relative;
+			}
+			.txt.nobottom {
+				border-bottom: none !important;
 			}
 			.txt .val {
 				position: absolute;
@@ -266,6 +270,7 @@
 			}
 			.grid div {
 				padding: 5px;
+				position: relative;
 			}
 			.btnbar {
 				background-color: #2a7bb4;
@@ -307,8 +312,123 @@
 				border: 1px solid #333;
 				border-radius: 6px;
 			}
+			dl {
+				margin: 0;
+			}
+			dd {
+				width: 126px;
+				height: 100px;
+				margin: 1px;
+				padding: 0;
+				text-align: center;
+				border-top: 1px solid #eee;
+				border-bottom: 1px solid #eee;
+			}
+			dl.wide {
+				width: 390px;
+			}
+			dl.wide dd {
+				float: left;
+				display: inline-block;
+				border: 1px solid #eee;
+			}
+			dd.selected {
+				background: url(tick.png) no-repeat 104px 5px, #eff7f0;
+			}
+			dd:hover {
+				background-color: #EAF2F8;
+				border-top: 1px solid #7eafd4;
+				border-bottom: 1px solid #7eafd4;
+			}
+			dl.wide dd:hover {
+				border: 1px solid #7eafd4;
+			}
+			dd.selected:hover {
+				background: url(tick.png) no-repeat 104px 5px, #eff7f0;
+				border-top: 1px solid #eee;
+				border-bottom: 1px solid #eee;
+			}
+			dl.wide dd.selected:hover {
+				border: 1px solid #eee;
+			}
+			dd .helperouter {
+				height: 87px !important;
+			}
+			dd img {
+				display: inline-block;
+				vertical-align: middle;
+			}
+			dd div {
+				font-family: Arial;
+				font-size: 12px;
+				margin: -3px 0 3px 0;
+			}
+			dl.wide dd:last-child {
+				width: 99.1%;
+			}
+			dd:last-child {
+				height: 20px;
+				background-color: #FFFFCC;
+			}
+			dd:last-child div {
+				line-height: 28px;
+			}
+			.preview {
+				position: relative;
+				border: 1px dashed transparent;
+			}
+			.preview:hover {
+				background-color: #d2d2d2;
+			}
+			.preview span {
+				cursor: pointer;
+				display: none;
+				position: absolute;
+				right: -10px;
+				top: -10px;
+			}
+			.dim_left {
+				position: absolute;
+				top: 43%;
+				left: -10px;
+				font-family: Arial;
+				font-size: 12px;
+				background-color: #fff;
+			}
+			.dim_bottom {
+				position: absolute;
+				top: 98%;
+				left: 48%;
+				font-family: Arial;
+				font-size: 12px;
+				background-color: #fff;
+			}
+			body > dd.ui-draggable {
+				display: none;
+			}
+			#dialog-modal {
+				font-size: 12px;
+			}
+			.ui-dialog-title {
+				font-size: 12px;
+			}
+			.ui-dialog-buttonset {
+				font-size: 12px;
+			}
 		</style>
-		<script src="http://ajax.googleapis.com/ajax/libs/jquery/1.10.2/jquery.min.js"></script>
+		<link rel="stylesheet" href="ui/jquery-ui.min.css" />
+		<script src="jquery-1.8.3.min.js"></script>
+		<script src="ui/jquery.ui.core.js"></script>
+		<script src="ui/jquery.ui.widget.js"></script>
+		<script src="ui/jquery.ui.mouse.js"></script>
+		<script src="ui/jquery.ui.position.js"></script>
+		<script src="ui/jquery.ui.dialog.js"></script>
+		<script src="ui/jquery.ui.draggable.js"></script>
+		<script src="ui/jquery.ui.droppable.js"></script>
+		<script src="jquery-collision.min.js"></script>
+		<!--
+		<script src="jquery-ui-draggable-collision.min.js"></script>
+		-->
 		<script>
 			function drawCanvas () {
 				var canvas = document.getElementById ('plot');
@@ -351,9 +471,151 @@
 					context.stroke ();
 				}
 			}
+			function clearClickedSelections () {
+				$('body .preview.selected').each (function () {
+					$(this).css ('border-color', 'transparent').css ('background-color', 'transparent');
+					$(this).find ('div').css ('display', 'none');
+					$(this).find ('span').css ('display', 'none');
+					$(this).removeClass ('selected');
+				});
+			}
 			$(document).ready(function () {
 				drawCanvas ();
+				$('.pics li').on ('mouseover', function () {
+					if ((lastOver) && ($(this)[0] == lastOver[0])) {
+						return; // ignore
+					}
+					if ($('#overlay').css ('display') != 'none') {
+						$('#overlay').css ('display', 'none');
+						$('#selections').css ('display', 'none');
+						$('.items .txt').removeClass ('nobottom').find ('.ardnc').css ('display', '');
+						lastOver = null;
+					}
+					$(this).css ('border', '1px solid #2a7bb4');
+				}).on ('mouseout', function () {
+					$(this).css ('border', '1px solid #eaf2f8');
+				}).on ('click', function () {
+					$('#overlay').css ('display', '').css ('left', $(this).offset ().left);
+					if ($(this).find ('dl')[0].className == 'wide') {
+						// TODO: Move offset by a further 128/130 pixels if the popup will flow off the edge of the canvas
+						$('#selections').css ('display', '').css ('left', $(this).offset ().left - 131).html ('');
+					} else {
+						$('#selections').css ('display', '').css ('left', $(this).offset ().left).html ('');
+					}
+					$(this).find ('dl').clone ().appendTo ('#selections').css ('display', '');
+					$('#selections dd').draggable ({
+						helper: function () {
+							var currWall = $('.mid .btbg')[0].value;
+							return $('<div class="preview wall' + currWall + '" style="width: 231px; height: 270px; background: url(pic5-c-big.png) no-repeat 0 0, #e2e2e2;"><div class="dim_left">28"</div><div class="dim_bottom">14"</div><span><img src="red_x.gif" /></span></div>').appendTo ('body').draggable ({
+								start: function (event, ui) {
+									$(this).appendTo ('body');
+								},
+								drag: function (event, ui) {
+									clearClickedSelections ();
+									$(this).css ('border-color', 'black').css ('background-color', '#c8c8c8');
+									$(this).find ('span').css ('display', 'inline');
+									$(this).find ('div').css ('display', '');
+									$(this).addClass ('selected');
+									if ($(this).collision ('.preview:visible').length > 1) {
+										$(this).css ('border-color', 'red').css ('background-color', 'rgba(243, 193, 193, 0.5)');
+									} else {
+										$(this).css ('border-color', 'black').css ('background-color', '#c8c8c8');
+									}
+								},
+								containment: '#plotoverlay',
+								revert: function () {
+									if ($(this).collision ('.preview:visible').length > 1) {
+										$('#dialog-modal p').html ('You are trying to overlap two items. The trim on the item will go red when you are infringing on another item.');
+										$('#dialog-modal').dialog ({
+											modal: true, 
+											buttons: {
+												Ok: function () {
+													$(this).dialog ('close');
+												}
+											},
+											position: 'center'
+										});
+										$(this).css ('border-color', 'black').css ('background-color', '#c8c8c8');
+									}
+									return ($(this).collision ('.preview:visible').length > 1);
+								}
+							}).on ('click', function () {
+								clearClickedSelections ();
+								$(this).css ('border-color', 'black').css ('background-color', '#c8c8c8');
+								$(this).find ('div').css ('display', '');
+								$(this).find ('span').css ('display', 'inline').off ('click').on ('click', function () {
+									$(this).closest ('.preview').remove ();
+								});
+								$(this).addClass ('selected');
+							}).on ('mouseover', function () {
+								if ($(this).hasClass ('selected') == false) {
+									$(this).css ('border-color', 'black').css ('background-color', '#e2e2e2');
+									$(this).find ('div').css ('display', '');
+								}
+							}).on ('mouseout', function () {
+								if ($(this).hasClass ('selected') == false) {
+									$(this).css ('border-color', 'transparent').css ('background-color', 'transparent');
+									$(this).find ('div').css ('display', 'none');
+								}
+							});
+						},
+						start: function (event, ui) {
+							$('#overlay').css ('display', 'none');
+							$('#selections').css ('display', 'none');
+							$('.items .txt').removeClass ('nobottom').find ('.ardnc').css ('display', '');
+							$(this).appendTo ('body');
+						},
+						drag: function (event, ui) {
+							if ($(ui.helper).collision ('.preview:visible').length > 1) {
+								$(ui.helper).css ('border-color', 'red').css ('background-color', 'rgba(243, 193, 193, 0.5)');
+							} else {
+								$(ui.helper).css ('border-color', 'black').css ('background-color', '#c8c8c8');
+							}
+						},
+						stop: function (event, ui) {
+							if ($(ui.helper).collision ('.preview:visible').length > 1) {
+								$('#dialog-modal p').html ('When dragging you items into your grid, beware not to place the item on top of an existing item. Items placed on top of another one will disappear. Simply drag and drop again making sure not to infringe on existing items.');
+								$('#dialog-modal').dialog ({
+									modal: true, 
+									buttons: {
+										Ok: function () {
+											$(this).dialog ('close');
+										}
+									},
+									position: 'center'
+								});
+								$(ui.helper).remove ();
+							}
+						},
+						containment: '#plotoverlay'
+					});
+					$('#plotoverlay').droppable ({
+						drop: function (event, ui) {
+							$.ui.ddmanager.current.cancelHelperRemoval = true;
+						}
+					}).on ('click', function () {
+						clearClickedSelections ();
+					});
+					var img = $(this).find ('.itmpic');
+					var imgoff = img.offset ();
+					// make it absolute positioned
+					img.css ('position', 'absolute').css ('z-index', 30).css ('left', imgoff.left).css ('top', imgoff.top);
+					var txt = $(this).find ('.txt');
+					var txtoff = txt.offset ();
+					// make it absolute positioned
+					txt.css ('position', 'absolute').css ('z-index', 30).css ('left', txtoff.left).css ('top', txtoff.top).css ('width', 127).addClass ('nobottom').find ('.ardnc').css ('display', 'none');
+					lastOver = $(this);
+				});
+				$('.mid button').on ('click', function () {
+					var currWall = $('.mid .btbg')[0].value;
+					var nextWall = $(this)[0].value;
+					$('.wall' + currWall).hide ();
+					$('.wall' + nextWall).show ();
+					$('.mid button').toggleClass ('btbg', false).toggleClass ('tbgb', true);
+					$(this).toggleClass ('btbg', true);
+				});
 			});
+			var lastOver = null;
 		</script>
     </head>
     <body>
@@ -372,6 +634,7 @@
 			}
 		  </style>
 		<![endif]-->
+
 		<div class="outer">
 			<div class="tb">
 				<div class="tbgb intro">
@@ -384,12 +647,62 @@
 						<div class="tbla"><div class="arlt"></div></div>
 						<div class="pics">
 							<ul>
-								<li class="itm"><span class="helper"></span><img src="pic1.png" /><div class="txt"><div class="val">Shelf Cabinet</div><div class="ardnc"></div></div></li>
-								<li class="itm"><span class="helper"></span><img src="pic3.png" /><div class="txt"><div class="val">Shelf Cabinet w/Doors</div><div class="ardnc"></div></div></li>
-								<li class="itm"><span class="helper"></span><img src="pic2.png" /><div class="txt"><div class="val">Cabinet 4 Drawer</div><div class="ardnc"></div></div></li>
-								<li class="itm"><span class="helper"></span><img src="pic5.png" /><div class="txt"><div class="val">Shelf With Pole 24"</div><div class="ardnc"></div></div></li>
-								<li class="itm"><span class="helper"></span><img src="pic6.png" /><div class="txt"><div class="val">Shelf With Pole 48"</div><div class="ardnc"></div></div></li>
-								<li class="itm"><span class="helper"></span><img src="pic4.png" /><div class="txt"><div class="val">Shelf 24"</div><div class="ardnc"></div></div></li>
+								<li class="itm">
+									<div class="helperouter"><span class="helper"></span><img class="itmpic" src="pic1.png" /></div><div class="txt"><div class="val">Shelf Cabinet</div><div class="ardnc"></div></div>
+									<dl style="display: none;">
+										<dd class="selected"><div class="helperouter"><span class="helper"></span><img src="pic1-a.png" /></div><div>Mocha</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic1-b.png" /></div><div>Maple</div></dd>
+										<dd><div>Drag item on your wall</div></dd>
+									</dl>
+								</li>
+								<li class="itm">
+									<div class="helperouter"><span class="helper"></span><img class="itmpic" src="pic3.png" /></div><div class="txt"><div class="val">Shelf Cabinet w/Doors</div><div class="ardnc"></div></div>
+									<dl style="display: none;">
+										<dd class="selected"><div class="helperouter"><span class="helper"></span><img src="pic2-a.png" /></div><div>Mocha</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic2-b.png" /></div><div>Maple</div></dd>
+										<dd><div>Drag item on your wall</div></dd>
+									</dl>
+								</li>
+								<li class="itm">
+									<div class="helperouter"><span class="helper"></span><img class="itmpic" src="pic2.png" /></div><div class="txt"><div class="val">Cabinet 4 Drawer</div><div class="ardnc"></div></div>
+									<dl style="display: none;">
+										<dd class="selected"><div class="helperouter"><span class="helper"></span><img src="pic3-a.png" /></div><div>Mocha</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic3-b.png" /></div><div>Maple</div></dd>
+										<dd><div>Drag item on your wall</div></dd>
+									</dl>
+								</li>
+								<li class="itm">
+									<div class="helperouter"><span class="helper"></span><img class="itmpic" src="pic5.png" /></div><div class="txt"><div class="val">Shelf With Pole 24"</div><div class="ardnc"></div></div>
+									<dl class="wide" style="display: none;">
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic4-a.png" /></div><div>Mocha/Shirts</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic4-b.png" /></div><div>Mocha/Pants</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic4-c.png" /></div><div>Mocha/Dress</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic4-a.png" /></div><div>Maple/Shirts</div></dd>
+										<dd class="selected"><div class="helperouter"><span class="helper"></span><img src="pic4-b.png" /></div><div>Maple/Pants</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic4-c.png" /></div><div>Maple/Dress</div></dd>
+										<dd><div>Drag and drop on your wall</div></dd>
+									</dl>
+								</li>
+								<li class="itm">
+									<div class="helperouter"><span class="helper"></span><img class="itmpic" src="pic6.png" /></div><div class="txt"><div class="val">Shelf With Pole 48"</div><div class="ardnc"></div></div>
+									<dl class="wide" style="display: none;">
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic5-a.png" /></div><div>Mocha/Shirts</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic5-b.png" /></div><div>Mocha/Pants</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic5-c.png" /></div><div>Mocha/Dress</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic5-a.png" /></div><div>Maple/Shirts</div></dd>
+										<dd class="selected"><div class="helperouter"><span class="helper"></span><img src="pic5-b.png" /></div><div>Maple/Pants</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic5-c.png" /></div><div>Maple/Dress</div></dd>										
+										<dd><div>Drag and drop on your wall</div></dd>
+									</dl>
+								</li>
+								<li class="itm">
+									<div class="helperouter"><span class="helper"></span><img class="itmpic" src="pic4.png" /></div><div class="txt"><div class="val">Shelf 24"</div><div class="ardnc"></div></div>
+									<dl style="display: none;">
+										<dd class="selected"><div class="helperouter"><span class="helper"></span><img src="pic6-a.png" /></div><div>Mocha</div></dd>
+										<dd><div class="helperouter"><span class="helper"></span><img src="pic6-b.png" /></div><div>Maple</div></dd>
+										<dd><div>Drag item on your wall</div></dd>
+									</dl>
+								</li>
 							</ul>
 						</div>
 						<div class="tbra"><div class="arrt"></div></div>
@@ -415,6 +728,7 @@
 					<canvas id="plot" width="955" height="470">
 					    HTML5 Canvas not supported
 					</canvas>
+					<div id="plotoverlay" style="position: absolute; top: 16px; left: 40px; width: 862px; height: 442px"></div>
 				</div>
 			</div>
 			<div class="btnbar">
@@ -426,13 +740,18 @@
 						<button class="tbgb next">Next Step</button>
 					</div>
 					<div class="mid">
-						<button class="tbgb">Wall A (192"x96")</button>
-						<button class="btbg">Wall B (192"x96")</button>
-						<button class="tbgb">Wall C (192"x96")</button>
+						<button class="tbgb" value="A">Wall A (192"x96")</button>
+						<button class="btbg" value="B">Wall B (192"x96")</button>
+						<button class="tbgb" value="C">Wall C (192"x96")</button>
 					</div>
 				</div>
 			</div>
 		</div>
+
+		<!-- Popover objects -->
+		<div id="overlay" style="display: none; position: absolute; z-index: 20; border: 1px solid #2a7bb4; border-bottom: none; top: 33px; left: 0px; width: 128px; height: 100px; background-color: #fff"></div>
+		<div id="selections" style="display: none; position: absolute; z-index: 20; border: 1px solid #2a7bb4; border-top: none; top: 134px; left: 0px; background-color: #fff"></div>
+		<div id="dialog-modal" title="Warning" style="display: none;"><p>Message</p></div>
 
     </body>
 </html>
