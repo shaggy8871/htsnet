@@ -17,6 +17,9 @@ function drawCanvas (wall, visible) {
 	}
 	wFeet = $('#metrics' + wall + ' .width')[0].value;
 	hFeet = $('#metrics' + wall + ' .height')[0].value;
+	if (hFeet > 72) {
+		hFeet = 72; // forced max height?
+	}
 	inchInFeet = 12;
 	feetInPixels = 54;
 	dimW = parseInt (wFeet / inchInFeet * feetInPixels);
@@ -32,7 +35,7 @@ function drawCanvas (wall, visible) {
 		scaleY = 0.8;
 	}
 	topX = parseInt (((958 / scaleX) - (dimW)) / 2);
-	topY = parseInt (((470 / scaleY) - (dimH)) / 2);
+	topY = (470 - (15 * 4.5) - dimH) / scaleY; //parseInt (((470 / scaleY) - (dimH)) / 2);
 	if (topX < 20) {
 		topX = 20;
 	}
@@ -43,6 +46,7 @@ function drawCanvas (wall, visible) {
 	var context = canvas[0].getContext ('2d');
 	$('.grid > div').append (canvas);
 	$('.grid > div').append ('<div id="plotoverlay' + wall + '" class="plotoverlay" style="' + (!visible ? 'display: none; ' : '') + 'position: absolute; top: ' + (topY * scaleY) + 'px; left: ' + (topX * scaleX) + 'px; width: ' + parseInt (dimW * scaleX) + 'px; height: ' + parseInt (dimH * scaleY) + 'px"></div>');
+	$('.grid > div').append ('<div id="plotoverlaywide' + wall + '" style="z-index: -1; position: absolute; top: ' + (topY * scaleY) + 'px; left: 5px; width: 958px; height: ' + parseInt (470 - (topY * scaleY)) + 'px"></div>'); // dimH * scaleY
 	//--- Scale down if it's too big
 	context.scale (scaleX, scaleY);
 	wallScale[wall] = [scaleX, scaleY];
@@ -106,6 +110,9 @@ function cloneWall (wall) {
 	}
 	wFeet = $('#metrics' + wall + ' .width')[0].value;
 	hFeet = $('#metrics' + wall + ' .height')[0].value;
+	if (hFeet > 72) {
+		hFeet = 72; // forced max height?
+	}
 	inchInFeet = 12;
 	feetInPixels = 54;
 	dimW = parseInt (wFeet / inchInFeet * feetInPixels);
@@ -186,10 +193,8 @@ function cloneWall (wall) {
 		}
 	}
 	//--- Add pictures
-	$('#plotoverlay').show ();
 	var overlayL = parseInt ($('#plotoverlay' + wall).css ('left')) + parseInt ($('.grid div').offset ().left);
 	var overlayT = parseInt ($('#plotoverlay' + wall).css ('top')) + parseInt ($('.grid div').offset ().top);
-	$('#plotoverlay').hide ();
 	var bgSKU = '';
 	var bgUPC = '';
 	switch (backgroundStyle) {
@@ -206,8 +211,9 @@ function cloneWall (wall) {
 	var total = 0.00;
 	var table = '';
 	table += '<table border="0" cellpadding="5" cellspacing="1">'
-	table += '<tr><th>Description</th><th>SKU</th><th>Color</th><th>UPC</th><th>Cost</th><th>QTY</th><th>TOTAL</th></tr>';
-	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><td>$ 219.99*</td><td>4</td><td>$ ' + parseFloat (219.99 * 4) + '*</td></tr>'; total += parseFloat (219.99 * 4);
+	table += '<tr><th>Description</th><th>SKU</th><th>Color</th><th>UPC</th><!--<th>Cost</th>--><th>QTY</th><!--<th>TOTAL</th>--></tr>';
+	var boxCount = (wFeet <= 96 ? 1 : (wFeet <= 192 ? 2 : 3));
+	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><!--<td>$ 219.99*</td>--><td>' + boxCount + '</td><!--<td>$ ' + parseFloat (219.99 * boxCount) + '*</td>--></tr>'; total += parseFloat (219.99 * boxCount);
 	$('.preview.wall' + wall).each (function () {
 		$(this).show ();
 		var tmpImg = $('<img src="' + $(this).css ('background-image').slice (4, $(this).css ('background-image').indexOf (')')).replace (/"/g, '') +'" />');
@@ -221,12 +227,13 @@ function cloneWall (wall) {
 			} else {
 				color = 0;
 			}
-			table += '<tr><td>' + shoppingLookup[sku].desc + '</td><td>' + shoppingLookup[sku].options[color][0] + '</td><td>' + shoppingLookup[sku].options[color][1] + '</td><td>' + shoppingLookup[sku].options[color][2] + '</td><td>$ ' + shoppingLookup[sku].options[color][3] + '*</td><td>1</td><td>$ ' + parseFloat (shoppingLookup[sku].options[color][3]) + '*</td></tr>'; total += parseFloat (shoppingLookup[sku].options[color][3]);
+			table += '<tr><td>' + shoppingLookup[sku].desc + '</td><td>' + shoppingLookup[sku].options[color][0] + '</td><td>' + shoppingLookup[sku].options[color][1] + '</td><td>' + shoppingLookup[sku].options[color][2] + '</td><!--<td>$ ' + shoppingLookup[sku].options[color][3] + '*</td>--><td>1</td><!--<td>$ ' + parseFloat (shoppingLookup[sku].options[color][3]) + '*</td>--></tr>'; total += parseFloat (shoppingLookup[sku].options[color][3]);
 		}
 	});
-	table += '<tr class="totals"><td>TOTAL</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>$ ' + parseFloat (total).toFixed (2) + '*</td></tr>';
+	// Removal of Price column
+	// table += '<tr class="totals"><td>TOTAL</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>$ ' + parseFloat (total).toFixed (2) + '*</td></tr>';
 	table += '</table>';
-	table += '<span>*Suggested retail only - prices may vary.</span>';
+	// table += '<span>*Suggested retail only - prices may vary.</span>';
 	$(table).appendTo ('#shadow' + wall);
 }
 
@@ -248,8 +255,13 @@ function totalWall () {
 	var total = 0.00;
 	var table = '';
 	table += '<table border="0" cellpadding="5" cellspacing="1">'
-	table += '<tr><th>Description</th><th>SKU</th><th>Color</th><th>UPC</th><th>Cost</th><th>QTY</th><th>TOTAL</th></tr>';
-	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><td>$ 219.99*</td><td>12</td><td>$ ' + parseFloat (219.99 * 12) + '*</td></tr>'; total += parseFloat (219.99 * 12);
+	table += '<tr><th>Description</th><th>SKU</th><th>Color</th><th>UPC</th><!--<th>Cost</th>--><th>QTY</th><!--<th>TOTAL</th>--></tr>';
+	var boxCount = (configSelected == 'walk-in' ? 
+					($('#metricsA .width')[0].value <= 96 ? 1 : ($('#metricsA .width')[0].value <= 192 ? 2 : 3)) + 
+					($('#metricsB .width')[0].value <= 96 ? 1 : ($('#metricsB .width')[0].value <= 192 ? 2 : 3)) + 
+					($('#metricsC .width')[0].value <= 96 ? 1 : ($('#metricsC .width')[0].value <= 192 ? 2 : 3)) : 
+					($('#metricsR .width')[0].value <= 96 ? 1 : ($('#metricsR .width')[0].value <= 192 ? 2 : 3)));
+	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><!--<td>$ 219.99*</td>--><td>' + boxCount + '</td><!--<td>$ ' + parseFloat (219.99 * boxCount) + '*</td>--></tr>'; total += parseFloat (219.99 * boxCount);
 	$('.preview').each (function () {
 		var sku = $(this).attr ('data-sku');
 		if (shoppingLookup[sku]) {
@@ -259,13 +271,303 @@ function totalWall () {
 			} else {
 				color = 0;
 			}
-			table += '<tr><td>' + shoppingLookup[sku].desc + '</td><td>' + shoppingLookup[sku].options[color][0] + '</td><td>' + shoppingLookup[sku].options[color][1] + '</td><td>' + shoppingLookup[sku].options[color][2] + '</td><td>$ ' + shoppingLookup[sku].options[color][3] + '*</td><td>1</td><td>$ ' + parseFloat (shoppingLookup[sku].options[color][3]) + '*</td></tr>'; total += parseFloat (shoppingLookup[sku].options[color][3]);
+			table += '<tr><td>' + shoppingLookup[sku].desc + '</td><td>' + shoppingLookup[sku].options[color][0] + '</td><td>' + shoppingLookup[sku].options[color][1] + '</td><td>' + shoppingLookup[sku].options[color][2] + '</td><!--<td>$ ' + shoppingLookup[sku].options[color][3] + '*</td>--><td>1</td><!--<td>$ ' + parseFloat (shoppingLookup[sku].options[color][3]) + '*</td>--></tr>'; total += parseFloat (shoppingLookup[sku].options[color][3]);
 		}
 	});
-	table += '<tr class="totals"><td>TOTAL</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>$ ' + parseFloat (total).toFixed (2) + '*</td></tr>';
+	// Removal of Price column
+	// table += '<tr class="totals"><td>TOTAL</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>$ ' + parseFloat (total).toFixed (2) + '*</td></tr>';
 	table += '</table>';
-	table += '<span>*Suggested retail only - prices may vary.</span>';
+	// table += '<span>*Suggested retail only - prices may vary.</span>';
 	$(table).appendTo ('#shadowtotal');
+}
+
+//--- Saving functions:
+
+function saveWall (wall) {
+	wFeet = $('#metrics' + wall + ' .width')[0].value;
+	hFeet = $('#metrics' + wall + ' .height')[0].value;
+	if (hFeet > 72) {
+		hFeet = 72; // forced max height?
+	}
+	inchInFeet = 12;
+	feetInPixels = 54;
+	dimW = parseInt (wFeet / inchInFeet * feetInPixels);
+	dimH = parseInt (hFeet / inchInFeet * feetInPixels);
+	scaleX = 1;
+	scaleY = 1;
+	if ((wFeet >= 150) && (wFeet < 200)) {
+		scaleX = 0.8;
+		scaleY = 0.8;
+	} else
+	if ((wFeet >= 200) && (wFeet < 230)) {
+		scaleX = 0.7;
+		scaleY = 0.7;
+	} else
+	if ((wFeet >= 230)) {
+		scaleX = 0.65;
+		scaleY = 0.65;
+	}
+	topX = parseInt (((770 / scaleX) - (dimW)) / 2);
+	topY = 20;
+	if (topX < 20) {
+		topX = 20;
+	}
+	var wallObj = {
+		label: wall,
+		backgroundStyle: backgroundStyle, 
+		wFeet: $('#metrics' + wall + ' .width')[0].value, 
+		hFeet: $('#metrics' + wall + ' .height')[0].value,
+		products: []
+	}
+	var overlayL = parseInt ($('#plotoverlay' + wall).css ('left')) + parseInt ($('.grid div').offset ().left);
+	var overlayT = parseInt ($('#plotoverlay' + wall).css ('top')) + parseInt ($('.grid div').offset ().top);
+	$('.preview.wall' + wall).each (function () {
+		$(this).show ();
+		wallObj.products.push ({
+			src: $(this).css ('background-image').slice (4, $(this).css ('background-image').indexOf (')')).replace (/"/g, ''),
+			left: parseInt ((parseInt ($(this).css ('left')) - parseInt (overlayL)) / wallScale[wall][0]) + topX,
+			top: parseInt ((parseInt ($(this).css ('top')) - parseInt (overlayT)) / wallScale[wall][1]) + topY,
+			sku: $(this).attr ('data-sku'),
+			color: ($(this).attr ('data-color') ? $(this).attr ('data-color') : 'White')
+		});
+		$(this).hide ();
+	});
+	return wallObj;
+}
+
+function saveWalls () {
+	savedWalls = []; // save globally
+	if (configSelected == 'walk-in') {
+		savedWalls.push (saveWall ('A'));
+		savedWalls.push (saveWall ('B'));
+		savedWalls.push (saveWall ('C'));
+	} else {
+		savedWalls.push (saveWall ('R'));
+	}
+}
+
+//--- Printing functions:
+
+function printWall (wall, wFeet, hFeet, backgroundStyle, products) {
+	//--- Get dimensions
+	if (hFeet > 72) {
+		hFeet = 72; // forced max height?
+	}
+	inchInFeet = 12;
+	feetInPixels = 54;
+	dimW = parseInt (wFeet / inchInFeet * feetInPixels);
+	dimH = parseInt (hFeet / inchInFeet * feetInPixels);
+	scaleX = 1;
+	scaleY = 1;
+	if ((wFeet >= 150) && (wFeet < 200)) {
+		scaleX = 0.8;
+		scaleY = 0.8;
+	} else
+	if ((wFeet >= 200) && (wFeet < 230)) {
+		scaleX = 0.7;
+		scaleY = 0.7;
+	} else
+	if ((wFeet >= 230)) {
+		scaleX = 0.65;
+		scaleY = 0.65;
+	}
+	topX = parseInt (((770 / scaleX) - (dimW)) / 2);
+	topY = 20;
+	if (topX < 20) {
+		topX = 20;
+	}
+	var canvas = $('<canvas id="wall' + wall + '" width="770" height="' + ((dimH * scaleY) + 20) +'">HTML5 Canvas not supported</canvas>');
+	var context = canvas[0].getContext ('2d');
+	var shadow = $('#shopping_list').append ('<div id="page' + wall + '" class="page"><div class="header"><img src="shoppinglist_header.png" /></div></div>');
+	$('#page' + wall).append (canvas);
+	//--- Scale down if it's too big
+	context.scale (scaleX, scaleY);
+	//--- Draw and fill rectangle
+	switch (backgroundStyle) {
+		case 'White':		context.fillStyle = '#fbfbfb'; break;
+		case 'Charcoal':	context.fillStyle = '#888'; break;
+		case 'Light gray':	context.fillStyle = '#ddd'; break;
+	}
+	context.fillRect (topX, topY, dimW, dimH);
+	context.strokeStyle = '#ddd';
+	context.strokeRect (topX - 1, topY - 1, dimW + 2, dimH + 2);
+	//--- Set font
+	context.font = "12px Arial";
+	context.strokeStyle = '#333';
+	context.fillStyle = '#000';
+	context.save ();
+	context.translate (topX, topY);
+	//--- Horizontal markers
+	for (var i = 0; i <= wFeet; i += inchInFeet) {
+		if (i) {
+			context.fillText (i + ' "', (i / inchInFeet * feetInPixels) - (i > 99 ? 12 : 8), (scaleX == 0.9 ? -12 : -8));
+			context.beginPath ();
+			context.moveTo ((i / inchInFeet * feetInPixels), -4);
+			context.lineTo ((i / inchInFeet * feetInPixels), 2);
+			context.stroke ();
+		}
+	}
+	context.restore ();
+	context.save ();
+	context.translate (topX, topY + dimH);
+	context.rotate (-Math.PI / 2); // Flip 90 degrees
+	//--- Vertical markers
+	for (var i = 0; i <= hFeet; i += inchInFeet) {
+		if (i) {
+			context.fillText (i + ' "', (i / inchInFeet * feetInPixels) - (i > 99 ? 12 : 8), -8);
+			context.beginPath ();
+			context.moveTo ((i / inchInFeet * feetInPixels), -4);
+			context.lineTo ((i / inchInFeet * feetInPixels), 2);
+			context.stroke ();
+		}
+	}
+	context.restore ();
+	context.strokeStyle = '#eee';
+	context.lineWidth = 3;
+	for (var i = topY; i <= topY + dimH; i += 21.4) {
+		if ((21.4 + i) <= (topY + dimH)) {
+			context.beginPath ();
+			context.moveTo (topX, 21.4 + i);
+			context.lineTo (topX + dimW, 21.4 + i);
+			context.stroke ();
+		}
+	}
+	//--- Add pictures
+	var overlayL = (topX * scaleX); // parseInt ($('#plotoverlay' + wall).css ('left')) + parseInt ($('.grid div').offset ().left);
+	var overlayT = (topY * scaleY); // parseInt ($('#plotoverlay' + wall).css ('top')) + parseInt ($('.grid div').offset ().top);
+	var bgSKU = '';
+	var bgUPC = '';
+	switch (backgroundStyle) {
+		case 'White':		bgSKU = '86102';
+							bgUPC = '782088861024';
+							break;
+		case 'Charcoal':	bgSKU = '86105';
+							bgUPC = '782088861055';
+							break;
+		case 'Light gray':	bgSKU = '86107';
+							bgUPC = '782088861079';
+							break;
+	}
+	var total = 0.00;
+	var table = '';
+	var boxCount = (wFeet <= 96 ? 1 : (wFeet <= 192 ? 2 : 3));
+	table += '<table border="0" cellpadding="5" cellspacing="1">'
+	table += '<tr><th>Description</th><th>SKU</th><th>Color</th><th>UPC</th><!--<th>Cost</th>--><th>QTY</th><!--<th>TOTAL</th>--></tr>';
+	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><!--<td>$ 219.99*</td>--><td>' + boxCount + '</td><!--<td>$ ' + parseFloat (219.99 * boxCount) + '*</td>--></tr>'; total += parseFloat (219.99 * boxCount);
+	for (var x = 0; x < products.length; x++) {
+		var imgUrl = products[x].src;
+		var imgL = products[x].left;
+		var imgT = products[x].top;
+		var sku = products[x].sku;
+		var color = products[x].color;
+		var tmpImg = $('<img id="test' + x + '" src="' + imgUrl +'" />').on ('load', { ctx: context, x: imgL, y: imgT }, function (e) {
+			e.data.ctx.drawImage (this, e.data.x, e.data.y);
+		});
+		if (shoppingLookup[sku]) {
+			if (color) {
+				color = getOptionByColor (sku, color);
+			} else {
+				color = 0;
+			}
+			table += '<tr><td>' + shoppingLookup[sku].desc + '</td><td>' + shoppingLookup[sku].options[color][0] + '</td><td>' + shoppingLookup[sku].options[color][1] + '</td><td>' + shoppingLookup[sku].options[color][2] + '</td><!--<td>$ ' + shoppingLookup[sku].options[color][3] + '*</td>--><td>1</td><!--<td>$ ' + parseFloat (shoppingLookup[sku].options[color][3]) + '*</td>--></tr>'; total += parseFloat (shoppingLookup[sku].options[color][3]);
+		}
+	}
+	// Removal of Price column
+	// table += '<tr class="totals"><td>TOTAL</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>$ ' + parseFloat (total).toFixed (2) + '*</td></tr>';
+	table += '</table>';
+	// table += '<span>*Suggested retail only - prices may vary.</span>';
+	$(table).appendTo ('#page' + wall);
+}
+
+function printTotalWall (backgroundStyle, boxCount, products) {
+	var shadow = $('#shopping_list').append ('<div id="pagetotal" class="page"><div class="header"><img src="shoppinglist_header.png" /></div></div>');
+	var bgSKU = '';
+	var bgUPC = '';
+	switch (backgroundStyle) {
+		case 'White':		bgSKU = '86102';
+							bgUPC = '782088861024';
+							break;
+		case 'Charcoal':	bgSKU = '86105';
+							bgUPC = '782088861055';
+							break;
+		case 'Light gray':	bgSKU = '86107';
+							bgUPC = '782088861079';
+							break;
+	}
+	var total = 0.00;
+	var table = '';
+	table += '<table border="0" cellpadding="5" cellspacing="1">'
+	table += '<tr><th>Description</th><th>SKU</th><th>Color</th><th>UPC</th><!--<th>Cost</th>--><th>QTY</th><!--<th>TOTAL</th>--></tr>';
+	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><!--<td>$ 219.99*</td>--><td>' + boxCount + '</td><!--<td>$ ' + parseFloat (219.99 * boxCount) + '*</td>--></tr>'; total += parseFloat (219.99 * boxCount);
+	for (var x = 0; x < products.length; x++) {
+		var sku = products[x].sku;
+		var color = products[x].color;
+		if (shoppingLookup[sku]) {
+			if (color) {
+				color = getOptionByColor (sku, color);
+			} else {
+				color = 0;
+			}
+			table += '<tr><td>' + shoppingLookup[sku].desc + '</td><td>' + shoppingLookup[sku].options[color][0] + '</td><td>' + shoppingLookup[sku].options[color][1] + '</td><td>' + shoppingLookup[sku].options[color][2] + '</td><!--<td>$ ' + shoppingLookup[sku].options[color][3] + '*</td>--><td>1</td><!--<td>$ ' + parseFloat (shoppingLookup[sku].options[color][3]) + '*</td>--></tr>'; total += parseFloat (shoppingLookup[sku].options[color][3]);
+		}
+	}
+	// Removal of Price column
+	// table += '<tr class="totals"><td>TOTAL</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>&nbsp;</td><td>$ ' + parseFloat (total).toFixed (2) + '*</td></tr>';
+	table += '</table>';
+	// table += '<span>*Suggested retail only - prices may vary.</span>';
+	$(table).appendTo ('#pagetotal');
+}
+
+function checkBoundaryHeight (boundaries, top, bottom) {
+	if (!$.isArray (boundaries)) {
+		return false;
+	}
+	for (var i = 0; i < boundaries.length; i++) {
+		if (((top >= boundaries[i][0]) && (top <= boundaries[i][1])) || ((bottom >= boundaries[i][0]) && (bottom <= boundaries[i][1]))) {
+			return true;
+		}
+	}
+	return false;
+}
+
+function checkOutOfBounds (which, currWall) {
+	var helperLeft = $(which).offset ().left + 2; // 2 = border
+	var helperWidth = $(which).width ();
+	var helperTop = $(which).offset ().top + 2;
+	var helperHeight = $(which).height ();
+	var wallLeft = $('#plotoverlay' + currWall).offset ().left + 5; // 5 = padding
+	var wallWidth = $('#plotoverlay' + currWall).width ();
+	var outOfBounds = false;
+	switch (currWall) {
+		case 'A':	if (($.isArray (wallBoundaryTests['B'][0])) && (helperLeft + helperWidth > wallLeft + wallWidth - (16 * 4.5))) {
+						outOfBounds = checkBoundaryHeight (wallBoundaryTests['B'][0], helperTop, helperTop + helperHeight);
+					}
+					break;
+		case 'B':	if (($.isArray (wallBoundaryTests['A'][1])) && (helperLeft < wallLeft + (16 * 4.5))) {
+						outOfBounds = checkBoundaryHeight (wallBoundaryTests['A'][1], helperTop, helperTop + helperHeight);
+					} else
+					if (($.isArray (wallBoundaryTests['C'][0])) && (helperLeft + helperWidth > wallLeft + wallWidth - (16 * 4.5))) {
+						outOfBounds = checkBoundaryHeight (wallBoundaryTests['C'][0], helperTop, helperTop + helperHeight);
+					}
+					break;
+		case 'C':	if (($.isArray (wallBoundaryTests['B'][1])) && (helperLeft < wallLeft + (16 * 4.5))) {
+						outOfBounds = checkBoundaryHeight (wallBoundaryTests['B'][1], helperTop, helperTop + helperHeight);
+					}
+					break;
+	}
+	return outOfBounds;
+}
+
+function checkOutOfBoundary (which, currWall) {
+	var helperLeft = $(which).offset ().left + 2; // 2 = border
+	var helperWidth = $(which).width ();
+	var helperTop = $(which).offset ().top + 2;
+	var helperHeight = $(which).height ();
+	var wallLeft = $('#plotoverlay' + currWall).offset ().left + 5; // 5 = padding
+	var wallWidth = $('#plotoverlay' + currWall).width ();
+	var wallTop = $('#plotoverlay' + currWall).offset ().top + 5; // 5 = padding
+	var wallHeight = $('#plotoverlay' + currWall).height ();
+	return (helperLeft + helperWidth < wallLeft) || (helperLeft > wallLeft + wallWidth) || (helperTop > wallTop + wallHeight);
 }
 
 function loadCanvasEvents () {
@@ -310,19 +612,29 @@ function loadCanvasEvents () {
 						$(this).appendTo ('body');
 					},
 					drag: function (event, ui) {
+						ui.position.top = Math.floor (ui.position.top / 3) * 3;
 						clearClickedSelections ();
 						$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
 						$(this).find ('span').css ('display', 'inline');
 						$(this).find ('div').css ('display', '');
 						$(this).addClass ('selected');
-						if ($(this).collision ('.preview:visible').length > 1) {
+						if ((checkOutOfBounds (this, currWall)) || (checkOutOfBoundary (this, currWall)) || ($(this).collision ('.preview:visible').length > 1)) {
 							$(this).css ('border-color', 'red').css ('background-color', 'rgba(243, 193, 193, 0.5)');
 						} else {
 							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
 						}
 					},
 					stop: function (event, ui) {
-						if ($(ui.helper).collision ('.plotoverlay:visible', { mode: 'protrusion' }).length >= 1) {
+						var collider = $(ui.helper).collision ('.plotoverlay:visible', { mode: 'protrusion', directionData: 'direction', as: '<div/>' });
+						var collisionDetected = false;
+						if (collider.length >= 1) {
+							$(collider).each (function () {
+								if (($(this).data ('direction').indexOf ('E') != -1) || ($(this).data ('direction').indexOf ('W') != -1)) {
+									collisionDetected = true;
+								}
+							});
+						}
+						if (collisionDetected) {
 							$('#dialog-modal p').html ('Your item will fit but you will need to cut it. Cutting instructions available on our website.');
 							$('#dialog-modal').dialog ({
 								modal: true, 
@@ -335,8 +647,8 @@ function loadCanvasEvents () {
 							});
 						}
 					}, 
-					grid: [1, 19.41],
-					containment: '#plot' + (configSelected == 'reach-in' ? 'R' : $('.mid .btbg')[0].value),
+//					grid: [1, 19.41],
+					containment: '#plotoverlaywide' + currWall,
 					revert: function () {
 						if ($(this).collision ('.preview:visible').length > 1) {
 							$('#dialog-modal p').html ('You are trying to overlap two items. The trim on the item will go red when you are infringing on another item.');
@@ -350,8 +662,37 @@ function loadCanvasEvents () {
 								position: 'center'
 							});
 							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+							return true;
 						}
-						return ($(this).collision ('.preview:visible').length > 1);
+						if (checkOutOfBounds (this, currWall)) {
+							$('#dialog-modal p').html ('You must leave a space of at least 16" from the edge in order to clear the item you placed on a another wall.');
+							$('#dialog-modal').dialog ({
+								modal: true, 
+								buttons: {
+									Ok: function () {
+										$(this).dialog ('close');
+									}
+								},
+								position: 'center'
+							});
+							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+							return true;
+						}
+						if (checkOutOfBoundary (this, currWall)) {
+							$('#dialog-modal p').html ('Your item must be placed somewhere within the wall boundaries.');
+							$('#dialog-modal').dialog ({
+								modal: true, 
+								buttons: {
+									Ok: function () {
+										$(this).dialog ('close');
+									}
+								},
+								position: 'center'
+							});
+							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+							return true;
+						}
+						return false;
 					}
 				}).on ('click', function () {
 					clearClickedSelections ();
@@ -374,6 +715,7 @@ function loadCanvasEvents () {
 				});
 			},
 			start: function (event, ui) {
+				clearClickedSelections ();
 				var img = lastOver.find ('.itmpic');
 				// make it relatively positioned
 				img.css ({'position': 'relative', 'left': '', 'top': ''});
@@ -386,7 +728,8 @@ function loadCanvasEvents () {
 				$(this).appendTo ('body'); // Push to top of display (so it doesn't drag under another item)
 			},
 			drag: function (event, ui) {
-				if ($(ui.helper).collision ('.preview:visible').length > 1) {
+				ui.position.top = Math.floor (ui.position.top / 3) * 3;
+				if ((checkOutOfBounds (ui.helper, currWall)) || (checkOutOfBoundary (ui.helper, currWall)) || ($(ui.helper).collision ('.preview:visible').length > 1)) {
 					$(ui.helper).css ('border-color', 'red').css ('background-color', 'rgba(243, 193, 193, 0.5)');
 				} else {
 					$(ui.helper).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
@@ -406,7 +749,16 @@ function loadCanvasEvents () {
 					});
 					$(ui.helper).remove ();
 				}
-				if ($(ui.helper).collision ('.plotoverlay:visible', { mode: 'protrusion' }).length >= 1) {
+				var collider = $(ui.helper).collision ('.plotoverlay:visible', { mode: 'protrusion', directionData: 'direction', as: '<div/>' });
+				var collisionDetected = false;
+				if (collider.length >= 1) {
+					$(collider).each (function () {
+						if (($(this).data ('direction').indexOf ('E') != -1) || ($(this).data ('direction').indexOf ('W') != -1)) {
+							collisionDetected = true;
+						}
+					});
+				}
+				if (collisionDetected) {
 					$('#dialog-modal p').html ('Your item will fit but you will need to cut it. Cutting instructions available on our website.');
 					$('#dialog-modal').dialog ({
 						modal: true, 
@@ -418,9 +770,24 @@ function loadCanvasEvents () {
 						position: 'center'
 					});
 				}
+				if (checkOutOfBounds (ui.helper, currWall)) {
+					$('#dialog-modal p').html ('You must leave a space of at least 16" from the edge in order to clear the item you placed on a another wall.');
+					$('#dialog-modal').dialog ({
+						modal: true, 
+						buttons: {
+							Ok: function () {
+								$(this).dialog ('close');
+							}
+						},
+						position: 'center'
+					});
+					$(ui.helper).remove ();
+				}
+				$(ui.helper).css ('border-color', 'transparent').css ('background-color', 'transparent');
+				$(ui.helper).find ('div').css ('display', 'none');
 			},
-			grid: [1, 19.41],
-			containment: '#plot' + currWall
+//			grid: [1, 19.41],
+			containment: '#plotoverlaywide' + currWall
 		});
 		$('#plotoverlayA, #plotoverlayB, #plotoverlayC, #plotoverlayR').droppable ({
 			drop: function (event, ui) {
@@ -594,7 +961,9 @@ function initButtonBar () {
 		$('#design').show ();
 	});
 	$('#shopping_list .save').on ('click', function () {
-		document.location = 'http://pdfcrowd.com/url_to_pdf/?width=210mm&height=297mm';
+		$.post ('save.php', { json: JSON.stringify (savedWalls) }).done (function (data) {
+			window.open ('render.php?id=' + data);
+		});
 	});
 	$('#shopping_list .retail').on ('click', function () {
 		window.open ('http://www.evoliacloset.com/design-center/retailers.html');
@@ -635,14 +1004,62 @@ function displayShoppingList () {
 		cloneWall ('C');
 		totalWall ();
 	}
+	saveWalls ();
 }
 
+//--- Execution starts here
 $(document).ready(function () {
 	initButtonBar ();
 	initDimensionBoxes ();
 	$('#design .mid button').on ('click', function () {
 		var currWall = $('#design .mid .btbg')[0].value;
 		var nextWall = $(this)[0].value;
+		//--- Save boundary tests so we don't need to look it up later
+		switch (currWall) {
+			case 'A':	//--- Save right side only
+						wallBoundaryTests[currWall] = [false, false];
+						$('.preview.wall' + currWall).each (function () {
+							if ($(this).offset ().left + $(this).width () > $('#plotoverlay' + currWall).offset ().left + $('#plotoverlay' + currWall).width () + 5 - (16 * 4.5)) {
+								if ($.isArray (wallBoundaryTests[currWall][1])) {
+									wallBoundaryTests[currWall][1].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+								} else {
+									wallBoundaryTests[currWall][1] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+								}
+							}
+						});
+						break;
+			case 'B':	//--- Save both left and right side
+						wallBoundaryTests[currWall] = [false, false];
+						$('.preview.wall' + currWall).each (function () {
+							if ($(this).offset ().left < $('#plotoverlay' + currWall).offset ().left + 5 + (16 * 4.5)) {
+								if ($.isArray (wallBoundaryTests[currWall][0])) {
+									wallBoundaryTests[currWall][0].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+								} else {
+									wallBoundaryTests[currWall][0] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+								}								
+							}
+							if ($(this).offset ().left + $(this).width () > $('#plotoverlay' + currWall).offset ().left + $('#plotoverlay' + currWall).width () + 5 - (16 * 4.5)) {
+								if ($.isArray (wallBoundaryTests[currWall][1])) {
+									wallBoundaryTests[currWall][1].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+								} else {
+									wallBoundaryTests[currWall][1] =  [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+								}
+							}
+						});
+						break;
+			case 'C':	//--- Save left of C
+						wallBoundaryTests[currWall] = [false, false];
+						$('.preview.wall' + currWall).each (function () {
+							if ($(this).offset ().left < $('#plotoverlay' + currWall).offset ().left + 5 + (16 * 4.5)) {
+								if ($.isArray (wallBoundaryTests[currWall][0])) {
+									wallBoundaryTests[currWall][0].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+								} else {
+									wallBoundaryTests[currWall][0] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+								}
+							}
+						});
+						break;
+		}
 		$('#plot' + currWall).hide ();
 		$('#plotoverlay' + currWall).hide ();
 		$('#plot' + nextWall).show ();
@@ -653,15 +1070,33 @@ $(document).ready(function () {
 		$(this).toggleClass ('btbg', true);
 	});
 });
+
+//--- Global settings (probably should be inside a class)
 var lastOver = null;
 var configSelected = null;
+//--- Store scale info for each wall
 var wallScale = {
 	A: [1, 1],
 	B: [1, 1], 
 	C: [1, 1]
 };
+//--- Store boundary test information (left wall, right wall)
+var wallBoundaryTests = {
+	A: [false, false],
+	B: [false, false],
+	C: [false, false]
+}
+
+//--- Default colors for wall and item
 var backgroundStyle = 'White';
 var itemStyle = 'White';
+
+//--- This variable stores the latest shopping list
+var savedWalls = {};
+
+//--- Edit this list with details of each product. The numbers (39101, 39201, etc) represent
+//--- the SKU code referenced by the data-sku attribute. The 'desc' attribute is for the shopping
+//--- list, while the 'options' attribute indicates prices and colors available for that item
 var shoppingLookup = {
 	39101: {
 		desc: '24" shelf w/ pole', 

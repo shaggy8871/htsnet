@@ -278,7 +278,7 @@
 						<button class="tbgb prev">Previous step</button>
 					</div>
 					<div class="right">
-						<button class="tbgb retail">Retailers</button>
+						<button class="tbgb retail">Get a Quote</button>
 						<button class="tbgb save">Save</button>
 					</div>
 				</div>
