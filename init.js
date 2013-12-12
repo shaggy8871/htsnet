@@ -53,7 +53,7 @@ function drawCanvas (wall, visible) {
 	//--- Draw and fill rectangle
 	switch (backgroundStyle) {
 		case 'White':		context.fillStyle = '#fbfbfb'; break;
-		case 'Charcoal':	context.fillStyle = '#888'; break;
+		case 'Charcoal':	context.fillStyle = '#444'; break;
 		case 'Light gray':	context.fillStyle = '#ddd'; break;
 	}
 	context.fillRect (topX, topY, dimW, dimH);
@@ -103,6 +103,63 @@ function drawCanvas (wall, visible) {
 	}
 }
 
+function preloadProducts (wall, products) {
+	wFeet = $('#metrics' + wall + ' .width')[0].value;
+	hFeet = $('#metrics' + wall + ' .height')[0].value;
+	if (hFeet > 72) {
+		hFeet = 72; // forced max height?
+	}
+	inchInFeet = 12;
+	feetInPixels = 54;
+	dimW = parseInt (wFeet / inchInFeet * feetInPixels);
+	dimH = parseInt (hFeet / inchInFeet * feetInPixels);
+	scaleX = 1;
+	scaleY = 1;
+	if ((wFeet >= 150) && (wFeet < 200)) {
+		scaleX = 0.8;
+		scaleY = 0.8;
+	} else
+	if ((wFeet >= 200) && (wFeet < 230)) {
+		scaleX = 0.7;
+		scaleY = 0.7;
+	} else
+	if ((wFeet >= 230)) {
+		scaleX = 0.65;
+		scaleY = 0.65;
+	}
+	topX = parseInt (((770 / scaleX) - (dimW)) / 2);
+	topY = 20;
+	if (topX < 20) {
+		topX = 20;
+	}
+	var currWall = (configSelected == 'reach-in' ? 'R' : $('#design .mid .btbg')[0].value);
+	var overlayL = parseInt ($('#plotoverlay' + wall).css ('left')) + parseInt ($('.grid div').offset ().left);
+	var overlayT = parseInt ($('#plotoverlay' + wall).css ('top')) + parseInt ($('.grid div').offset ().top);
+	if ($('#design').css ('display') != 'none') {
+		hiddenWall = (wall != currWall);
+	} else {
+		hiddenWall = false;
+	}
+	if (hiddenWall) {
+		$('.preview.wall' + wall).show ();
+	}
+	for (var x = 0; x < products.length; x++) {
+		var imgUrl = products[x].src;
+		var imgL = (((products[x].left - topX) * wallScale[wall][0]) + overlayL);
+		var imgT = (((products[x].top - topY) * wallScale[wall][1]) + overlayT);
+		var sku = products[x].sku;
+		var color = products[x].color;
+		var type = products[x].type;
+		var original = $('dd[data-helper$="' + imgUrl.split ('/').pop ().replace (/(black|green|orange|red|white)/gi, 'black') + '"]');
+		var scaleW = ((original.attr ('data-helper-w') ? parseInt (original.attr ('data-helper-w') * 4.5) : 216) * wallScale[wall][0]);
+		var scaleH = ((original.attr ('data-helper-h') ? parseInt (original.attr ('data-helper-h') * 4.5) : 235) * wallScale[wall][1]);
+		$('<div class="preview wall' + wall + ' ui-draggable" data-sku="' + sku + '" data-type="' + type + '" data-color="' + color + '" style="' + (!hiddenWall ? '' : 'display: none; ') + 'position: absolute; left: ' + imgL + 'px; top: ' + imgT + 'px; width: ' + scaleW + 'px; height: ' + scaleH + 'px; background: url(' + imgUrl + ') no-repeat 0 0, transparent; background-size: ' + scaleW + 'px ' + scaleH + 'px;"><div class="dim_left" style="display: none;">' + (original.attr ('data-helper-h') ? original.attr ('data-helper-h') : 0) + '"</div><div class="dim_bottom" style="display: none;">' + (original.attr ('data-helper-w') ? original.attr ('data-helper-w') : 0) + '"</div><span><img src="red_x.gif" /></span></div>').appendTo ('body').loadHelperEvents (wall);
+	}
+	if (hiddenWall) {
+		$('.preview.wall' + wall).hide ();
+	}
+}
+
 function cloneWall (wall) {
 	//--- Get dimensions
 	if ($('#clone' + wall).length != 0) {
@@ -145,7 +202,7 @@ function cloneWall (wall) {
 	//--- Draw and fill rectangle
 	switch (backgroundStyle) {
 		case 'White':		context.fillStyle = '#fbfbfb'; break;
-		case 'Charcoal':	context.fillStyle = '#888'; break;
+		case 'Charcoal':	context.fillStyle = '#444'; break;
 		case 'Light gray':	context.fillStyle = '#ddd'; break;
 	}
 	context.fillRect (topX, topY, dimW, dimH);
@@ -217,7 +274,7 @@ function cloneWall (wall) {
 	$('.preview.wall' + wall).each (function () {
 		$(this).show ();
 		var tmpImg = $('<img src="' + $(this).css ('background-image').slice (4, $(this).css ('background-image').indexOf (')')).replace (/"/g, '') +'" />');
-		context.drawImage (tmpImg[0], parseInt ((parseInt ($(this).css ('left')) - parseInt (overlayL)) / wallScale[wall][0]) + topX, parseInt ((parseInt ($(this).css ('top')) - parseInt (overlayT)) / wallScale[wall][1]) + topY);
+		context.drawImage (tmpImg[0], parseInt ((parseInt ($(this).css ('left')) - parseInt (overlayL)) / wallScale[wall][0]) + topX - 5, parseInt ((parseInt ($(this).css ('top')) - parseInt (overlayT)) / wallScale[wall][1]) + topY - 5);
 		$(this).hide ();
 		var sku = $(this).attr ('data-sku');
 		if (shoppingLookup[sku]) {
@@ -319,10 +376,13 @@ function saveWall (wall) {
 		hFeet: $('#metrics' + wall + ' .height')[0].value,
 		products: []
 	}
+	var currWall = (configSelected == 'reach-in' ? 'R' : $('#design .mid .btbg')[0].value);
 	var overlayL = parseInt ($('#plotoverlay' + wall).css ('left')) + parseInt ($('.grid div').offset ().left);
 	var overlayT = parseInt ($('#plotoverlay' + wall).css ('top')) + parseInt ($('.grid div').offset ().top);
 	$('.preview.wall' + wall).each (function () {
-		$(this).show ();
+		if (wall != currWall) {
+			$(this).show ();
+		}
 		wallObj.products.push ({
 			src: $(this).css ('background-image').slice (4, $(this).css ('background-image').indexOf (')')).replace (/"/g, ''),
 			left: parseInt ((parseInt ($(this).css ('left')) - parseInt (overlayL)) / wallScale[wall][0]) + topX,
@@ -330,12 +390,14 @@ function saveWall (wall) {
 			sku: $(this).attr ('data-sku'),
 			color: ($(this).attr ('data-color') ? $(this).attr ('data-color') : 'White')
 		});
-		$(this).hide ();
+		if (wall != currWall) {
+			$(this).hide ();
+		}
 	});
 	return wallObj;
 }
 
-function saveWalls () {
+function saveWalls (email) {
 	savedWalls = []; // save globally
 	if (configSelected == 'walk-in') {
 		savedWalls.push (saveWall ('A'));
@@ -343,6 +405,11 @@ function saveWalls () {
 		savedWalls.push (saveWall ('C'));
 	} else {
 		savedWalls.push (saveWall ('R'));
+	}
+	if (email) {
+		savedWalls.forEach (function (e) {
+			e.email = email;
+		});
 	}
 }
 
@@ -385,7 +452,7 @@ function printWall (wall, wFeet, hFeet, backgroundStyle, products) {
 	//--- Draw and fill rectangle
 	switch (backgroundStyle) {
 		case 'White':		context.fillStyle = '#fbfbfb'; break;
-		case 'Charcoal':	context.fillStyle = '#888'; break;
+		case 'Charcoal':	context.fillStyle = '#444'; break;
 		case 'Light gray':	context.fillStyle = '#ddd'; break;
 	}
 	context.fillRect (topX, topY, dimW, dimH);
@@ -456,8 +523,8 @@ function printWall (wall, wFeet, hFeet, backgroundStyle, products) {
 	table += '<tr><td>8"x6" Wall Panels + trims</td><td>' + bgSKU + '</td><td>' + backgroundStyle + '</td><td>' + bgUPC + '</td><!--<td>$ 219.99*</td>--><td>' + boxCount + '</td><!--<td>$ ' + parseFloat (219.99 * boxCount) + '*</td>--></tr>'; total += parseFloat (219.99 * boxCount);
 	for (var x = 0; x < products.length; x++) {
 		var imgUrl = products[x].src;
-		var imgL = products[x].left;
-		var imgT = products[x].top;
+		var imgL = products[x].left - 5;
+		var imgT = products[x].top - 5;
 		var sku = products[x].sku;
 		var color = products[x].color;
 		var tmpImg = $('<img id="test' + x + '" src="' + imgUrl +'" />').on ('load', { ctx: context, x: imgL, y: imgT }, function (e) {
@@ -563,15 +630,176 @@ function checkOutOfBoundary (which, currWall) {
 	var helperWidth = $(which).width ();
 	var helperTop = $(which).offset ().top + 2;
 	var helperHeight = $(which).height ();
+	var helperType = $(which).attr ('data-type');
 	var wallLeft = $('#plotoverlay' + currWall).offset ().left + 5; // 5 = padding
 	var wallWidth = $('#plotoverlay' + currWall).width ();
 	var wallTop = $('#plotoverlay' + currWall).offset ().top + 5; // 5 = padding
 	var wallHeight = $('#plotoverlay' + currWall).height ();
-	return (helperLeft + helperWidth < wallLeft) || (helperLeft > wallLeft + wallWidth) || (helperTop > wallTop + wallHeight);
+	return ((helperType == 'shelf' ? false : (helperLeft < wallLeft) || (helperLeft + helperWidth > wallLeft + wallWidth))) || (helperLeft + helperWidth < wallLeft) || (helperLeft > wallLeft + wallWidth) || (helperTop > wallTop + wallHeight);
+}
+
+function saveWallBoundaries (currWall) {
+	//--- Save boundary tests so we don't need to look it up later
+	switch (currWall) {
+		case 'A':	//--- Save right side only
+					wallBoundaryTests[currWall] = [false, false];
+					$('.preview.wall' + currWall).each (function () {
+						if ($(this).offset ().left + $(this).width () > $('#plotoverlay' + currWall).offset ().left + $('#plotoverlay' + currWall).width () + 5 - (16 * 4.5)) {
+							if ($.isArray (wallBoundaryTests[currWall][1])) {
+								wallBoundaryTests[currWall][1].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+							} else {
+								wallBoundaryTests[currWall][1] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+							}
+						}
+					});
+					break;
+		case 'B':	//--- Save both left and right side
+					wallBoundaryTests[currWall] = [false, false];
+					$('.preview.wall' + currWall).each (function () {
+						if ($(this).offset ().left < $('#plotoverlay' + currWall).offset ().left + 5 + (16 * 4.5)) {
+							if ($.isArray (wallBoundaryTests[currWall][0])) {
+								wallBoundaryTests[currWall][0].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+							} else {
+								wallBoundaryTests[currWall][0] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+							}								
+						}
+						if ($(this).offset ().left + $(this).width () > $('#plotoverlay' + currWall).offset ().left + $('#plotoverlay' + currWall).width () + 5 - (16 * 4.5)) {
+							if ($.isArray (wallBoundaryTests[currWall][1])) {
+								wallBoundaryTests[currWall][1].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+							} else {
+								wallBoundaryTests[currWall][1] =  [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+							}
+						}
+					});
+					break;
+		case 'C':	//--- Save left of C
+					wallBoundaryTests[currWall] = [false, false];
+					$('.preview.wall' + currWall).each (function () {
+						if ($(this).offset ().left < $('#plotoverlay' + currWall).offset ().left + 5 + (16 * 4.5)) {
+							if ($.isArray (wallBoundaryTests[currWall][0])) {
+								wallBoundaryTests[currWall][0].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
+							} else {
+								wallBoundaryTests[currWall][0] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
+							}
+						}
+					});
+					break;
+	}
+}
+
+/*
+ * Note: this is a jQuery extension function, not a standard one
+ */
+jQuery.fn.loadHelperEvents = function (currWall) {
+	return $(this).draggable ({
+		start: function (event, ui) {
+			clearClickedSelections ();
+			$(this).appendTo ('body');
+		},
+		drag: function (event, ui) {
+			ui.position.top = Math.floor (ui.position.top / 3) * 3;
+			$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+			$(this).find ('span').css ('display', 'inline');
+			$(this).find ('div').css ('display', '');
+			$(this).addClass ('selected');
+			if ((checkOutOfBounds (this, currWall)) || (checkOutOfBoundary (this, currWall)) || ($(this).collision ('.preview:visible').length > 1)) {
+				$(this).css ('border-color', 'red').css ('background-color', 'rgba(243, 193, 193, 0.5)');
+			} else {
+				$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+			}
+		},
+		stop: function (event, ui) {
+			var collider = $(ui.helper).collision ('.plotoverlay:visible', { mode: 'protrusion', directionData: 'direction', as: '<div/>' });
+			var collisionDetected = false;
+			if (collider.length >= 1) {
+				$(collider).each (function () {
+					if (($(this).data ('direction').indexOf ('E') != -1) || ($(this).data ('direction').indexOf ('W') != -1)) {
+						collisionDetected = true;
+					}
+				});
+			}
+			if (collisionDetected) {
+				$('#dialog-modal p').html ('Your item will fit but you will need to cut it. Cutting instructions available on our website.');
+				$('#dialog-modal').dialog ({
+					modal: true, 
+					buttons: {
+						Ok: function () {
+							$(this).dialog ('close');
+						}
+					},
+					position: 'center'
+				});
+			}
+		}, 
+		containment: '#plotoverlaywide' + currWall,
+		revert: function () {
+			if ($(this).collision ('.preview:visible').length > 1) {
+				$('#dialog-modal p').html ('You are trying to overlap two items. The trim on the item will go red when you are infringing on another item.');
+				$('#dialog-modal').dialog ({
+					modal: true, 
+					buttons: {
+						Ok: function () {
+							$(this).dialog ('close');
+						}
+					},
+					position: 'center'
+				});
+				$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+				return true;
+			}
+			if (checkOutOfBounds (this, currWall)) {
+				$('#dialog-modal p').html ('You must leave a space of at least 16" from the edge in order to clear the item you placed on a another wall.');
+				$('#dialog-modal').dialog ({
+					modal: true, 
+					buttons: {
+						Ok: function () {
+							$(this).dialog ('close');
+						}
+					},
+					position: 'center'
+				});
+				$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+				return true;
+			}
+			if (checkOutOfBoundary (this, currWall)) {
+				$('#dialog-modal p').html ('Your item must be placed somewhere within the wall boundaries.');
+				$('#dialog-modal').dialog ({
+					modal: true, 
+					buttons: {
+						Ok: function () {
+							$(this).dialog ('close');
+						}
+					},
+					position: 'center'
+				});
+				$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+				return true;
+			}
+			return false;
+		}
+	}).on ('click', function () {
+		clearClickedSelections ();
+		$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
+		$(this).find ('div').css ('display', '');
+		$(this).find ('span').css ('display', 'inline').off ('click').on ('click', function () {
+			$(this).closest ('.preview').remove ();
+		});
+		$(this).addClass ('selected');
+	}).on ('mouseover', function () {
+		if ($(this).hasClass ('selected') == false) {
+			$(this).css ('border-color', 'black').css ('background-color', 'rgba(226, 226, 226, 0.5)');
+			$(this).find ('div').css ('display', '');
+		}
+	}).on ('mouseout', function () {
+		if ($(this).hasClass ('selected') == false) {
+			$(this).css ('border-color', 'transparent').css ('background-color', 'transparent');
+			$(this).find ('div').css ('display', 'none');
+		}
+	});
 }
 
 function loadCanvasEvents () {
-	$('.pics .itm').on ('mouseover', function () {
+	$('.pics .itm').off ('mouseover').on ('mouseover', function () {
 		if ((lastOver) && ($(this)[0] == lastOver[0])) {
 			return; // ignore
 		}
@@ -588,12 +816,11 @@ function loadCanvasEvents () {
 			lastOver = null;
 		}
 		$(this).css ('border', '1px solid #2a7bb4');
-	}).on ('mouseout', function () {
+	}).off ('mouseout').on ('mouseout', function () {
 		$(this).css ('border', '1px solid #eaf2f8');
-	}).on ('click', function () {
+	}).off ('click').on ('click', function () {
 		$('#overlay').css ('display', '').css ('left', $(this).offset ().left);
 		if ($(this).find ('dl')[0].className == 'wide') {
-			// TODO: Move offset by a further 128/130 pixels if the popup will flow off the edge of the canvas
 			$('#selections').css ('display', '').css ('left', $(this).offset ().left - 131 + (($(this).offset ().left - 131) < 0 ? 131 : 0)).html ('');
 		} else {
 			$('#selections').css ('display', '').css ('left', $(this).offset ().left).html ('');
@@ -607,112 +834,7 @@ function loadCanvasEvents () {
 				var scaleY = wallScale[currWall][1];
 				var scaleW = (($(this).attr ('data-helper-w') ? parseInt ($(this).attr ('data-helper-w') * 4.5) : 216) * scaleX);
 				var scaleH = (($(this).attr ('data-helper-h') ? parseInt ($(this).attr ('data-helper-h') * 4.5) : 235) * scaleY);
-				return $('<div class="preview wall' + currWall + '" data-sku="' + ($(this).attr ('data-sku') ? $(this).attr ('data-sku') : '') + '" data-color="" style="width: ' + scaleW + 'px; height: ' + scaleH + 'px; background: url(' + ($(this).attr ('data-helper') ? (itemStyle ? $(this).attr ('data-helper').replace (/(black|green|orange|red|white)/gi, itemStyle.toLowerCase ()) : $(this).attr ('data-helper')) : '') + ') no-repeat 0 0, rgba(226, 226, 226, 0.5); background-size: ' + scaleW + 'px ' + scaleH + 'px;"><div class="dim_left">' + ($(this).attr ('data-helper-h') ? $(this).attr ('data-helper-h') : 0) + '"</div><div class="dim_bottom">' + ($(this).attr ('data-helper-w') ? $(this).attr ('data-helper-w') : 0) + '"</div><span><img src="red_x.gif" /></span></div>').appendTo ('body').draggable ({
-					start: function (event, ui) {
-						$(this).appendTo ('body');
-					},
-					drag: function (event, ui) {
-						ui.position.top = Math.floor (ui.position.top / 3) * 3;
-						clearClickedSelections ();
-						$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
-						$(this).find ('span').css ('display', 'inline');
-						$(this).find ('div').css ('display', '');
-						$(this).addClass ('selected');
-						if ((checkOutOfBounds (this, currWall)) || (checkOutOfBoundary (this, currWall)) || ($(this).collision ('.preview:visible').length > 1)) {
-							$(this).css ('border-color', 'red').css ('background-color', 'rgba(243, 193, 193, 0.5)');
-						} else {
-							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
-						}
-					},
-					stop: function (event, ui) {
-						var collider = $(ui.helper).collision ('.plotoverlay:visible', { mode: 'protrusion', directionData: 'direction', as: '<div/>' });
-						var collisionDetected = false;
-						if (collider.length >= 1) {
-							$(collider).each (function () {
-								if (($(this).data ('direction').indexOf ('E') != -1) || ($(this).data ('direction').indexOf ('W') != -1)) {
-									collisionDetected = true;
-								}
-							});
-						}
-						if (collisionDetected) {
-							$('#dialog-modal p').html ('Your item will fit but you will need to cut it. Cutting instructions available on our website.');
-							$('#dialog-modal').dialog ({
-								modal: true, 
-								buttons: {
-									Ok: function () {
-										$(this).dialog ('close');
-									}
-								},
-								position: 'center'
-							});
-						}
-					}, 
-//					grid: [1, 19.41],
-					containment: '#plotoverlaywide' + currWall,
-					revert: function () {
-						if ($(this).collision ('.preview:visible').length > 1) {
-							$('#dialog-modal p').html ('You are trying to overlap two items. The trim on the item will go red when you are infringing on another item.');
-							$('#dialog-modal').dialog ({
-								modal: true, 
-								buttons: {
-									Ok: function () {
-										$(this).dialog ('close');
-									}
-								},
-								position: 'center'
-							});
-							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
-							return true;
-						}
-						if (checkOutOfBounds (this, currWall)) {
-							$('#dialog-modal p').html ('You must leave a space of at least 16" from the edge in order to clear the item you placed on a another wall.');
-							$('#dialog-modal').dialog ({
-								modal: true, 
-								buttons: {
-									Ok: function () {
-										$(this).dialog ('close');
-									}
-								},
-								position: 'center'
-							});
-							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
-							return true;
-						}
-						if (checkOutOfBoundary (this, currWall)) {
-							$('#dialog-modal p').html ('Your item must be placed somewhere within the wall boundaries.');
-							$('#dialog-modal').dialog ({
-								modal: true, 
-								buttons: {
-									Ok: function () {
-										$(this).dialog ('close');
-									}
-								},
-								position: 'center'
-							});
-							$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
-							return true;
-						}
-						return false;
-					}
-				}).on ('click', function () {
-					clearClickedSelections ();
-					$(this).css ('border-color', 'black').css ('background-color', 'rgba(200, 200, 200, 0.5)');
-					$(this).find ('div').css ('display', '');
-					$(this).find ('span').css ('display', 'inline').off ('click').on ('click', function () {
-						$(this).closest ('.preview').remove ();
-					});
-					$(this).addClass ('selected');
-				}).on ('mouseover', function () {
-					if ($(this).hasClass ('selected') == false) {
-						$(this).css ('border-color', 'black').css ('background-color', 'rgba(226, 226, 226, 0.5)');
-						$(this).find ('div').css ('display', '');
-					}
-				}).on ('mouseout', function () {
-					if ($(this).hasClass ('selected') == false) {
-						$(this).css ('border-color', 'transparent').css ('background-color', 'transparent');
-						$(this).find ('div').css ('display', 'none');
-					}
-				});
+				return $('<div class="preview wall' + currWall + '" data-sku="' + ($(this).attr ('data-sku') ? $(this).attr ('data-sku') : '') + '" data-type="' + ($(this).attr ('data-type') ? $(this).attr ('data-type') : '') + '" data-color="" style="width: ' + scaleW + 'px; height: ' + scaleH + 'px; background: url(' + ($(this).attr ('data-helper') ? (itemStyle ? $(this).attr ('data-helper').replace (/(black|green|orange|red|white)/gi, itemStyle.toLowerCase ()) : $(this).attr ('data-helper')) : '') + ') no-repeat 0 0, rgba(226, 226, 226, 0.5); background-size: ' + scaleW + 'px ' + scaleH + 'px;"><div class="dim_left">' + ($(this).attr ('data-helper-h') ? $(this).attr ('data-helper-h') : 0) + '"</div><div class="dim_bottom">' + ($(this).attr ('data-helper-w') ? $(this).attr ('data-helper-w') : 0) + '"</div><span><img src="red_x.gif" /></span></div>').appendTo ('body').loadHelperEvents (currWall);
 			},
 			start: function (event, ui) {
 				clearClickedSelections ();
@@ -783,18 +905,28 @@ function loadCanvasEvents () {
 					});
 					$(ui.helper).remove ();
 				}
+				if (checkOutOfBoundary (ui.helper, currWall)) {
+					$('#dialog-modal p').html ('Your item must be placed somewhere within the wall boundaries.');
+					$('#dialog-modal').dialog ({
+						modal: true, 
+						buttons: {
+							Ok: function () {
+								$(this).dialog ('close');
+							}
+						},
+						position: 'center'
+					});
+					$(ui.helper).remove ();
+				}
 				$(ui.helper).css ('border-color', 'transparent').css ('background-color', 'transparent');
 				$(ui.helper).find ('div').css ('display', 'none');
 			},
-//			grid: [1, 19.41],
 			containment: '#plotoverlaywide' + currWall
 		});
 		$('#plotoverlayA, #plotoverlayB, #plotoverlayC, #plotoverlayR').droppable ({
 			drop: function (event, ui) {
 				$.ui.ddmanager.current.cancelHelperRemoval = true;
 			}
-		}).on ('click', function () {
-			clearClickedSelections ();
 		});
 		var img = $(this).find ('.itmpic');
 		var imgoff = img.offset ();
@@ -806,7 +938,7 @@ function loadCanvasEvents () {
 		txt.css ('position', 'absolute').css ('z-index', 30).css ('left', txtoff.left).css ('top', txtoff.top).css ('width', 127).addClass ('nobottom').find ('.ardnc').css ('display', 'none');
 		lastOver = $(this);
 	});
-	$('.tbra').on ('click', function () {
+	$('.tbra').off ('click').on ('click', function () {
 		if ($('.pics .itm:eq(5)').hasClass ('last')) {
 			return false; // Prevent loop!
 		}
@@ -824,7 +956,7 @@ function loadCanvasEvents () {
 		}
 		$('.pics .itm:first').insertAfter ($('.pics .itm:last'));
 	});
-	$('.tbla').on ('click', function () {
+	$('.tbla').off ('click').on ('click', function () {
 		if ($('.pics .itm:first').hasClass ('first')) {
 			return false; // Prevent loop!
 		}
@@ -842,15 +974,15 @@ function loadCanvasEvents () {
 		}
 		$('.pics .itm:last').insertBefore ($('.pics .itm:first'));
 	});
-	$('.slider .wallout').on ('click', function () {
+	$('.slider .wallout').off ('click').on ('click', function () {
 		$('#wallcolor').css ('visibility', 'visible');
 	});
-	$('#wallcolor').on ('mouseover', function () {
+	$('#wallcolor').off ('mouseover').on ('mouseover', function () {
 		$(this).delay (50).css ('visibility', 'visible');
-	}).on ('mouseout', function () {
+	}).off ('mouseout').on ('mouseout', function () {
 		$(this).delay (50).css ('visibility', 'hidden');
 	});
-	$('#wallcolor .wallout').on ('click', function () {
+	$('#wallcolor .wallout').off ('click').on ('click', function () {
 		backgroundStyle = $(this).attr ('title'); // set globally
 		switch ($(this).attr ('title')) {
 			case 'White':		$('.slider .wallout .pos').removeClass ('tbgb white charcoal lightgray').addClass ('white');
@@ -869,15 +1001,15 @@ function loadCanvasEvents () {
 		}
 		$('#wallcolor').css ('visibility', 'hidden');
 	});
-	$('.slider .itemout').on ('click', function () {
+	$('.slider .itemout').off ('click').on ('click', function () {
 		$('#itemcolor').css ('visibility', 'visible');
 	});
-	$('#itemcolor').on ('mouseover', function () {
+	$('#itemcolor').off ('mouseover').on ('mouseover', function () {
 		$(this).delay (50).css ('visibility', 'visible');
-	}).on ('mouseout', function () {
+	}).off ('mouseout').on ('mouseout', function () {
 		$(this).delay (50).css ('visibility', 'hidden');
 	});
-	$('#itemcolor .itemout').on ('click', function () {
+	$('#itemcolor .itemout').off ('click').on ('click', function () {
 		var color = $(this).attr ('title');
 		itemStyle = color; // set globally
 		$('.slider .itemout .pos').removeClass ('tbgb itemwhite black red green orange').addClass ((itemStyle == 'White' ? 'itemwhite' : itemStyle.toLowerCase ()));
@@ -887,6 +1019,9 @@ function loadCanvasEvents () {
 			$(this).css ('background-image', 'url(' + tmpImg.replace (/(black|green|orange|red|white)/gi, color.toLowerCase ()) + ')');
 		});
 		$('#itemcolor').css ('visibility', 'hidden');
+	});
+	$('#plotoverlayA, #plotoverlayB, #plotoverlayC, #plotoverlayR').on ('click', function () {
+		clearClickedSelections ();
 	});
 
 }
@@ -898,6 +1033,34 @@ function clearClickedSelections () {
 		$(this).find ('span').css ('display', 'none');
 		$(this).removeClass ('selected');
 	});
+}
+
+function showDesigner () {
+	savedWalls = [];
+	$('.preview').remove (); // remove all existing items
+	if (configSelected == 'walk-in') {
+		$('#design .mid button')[0].innerHTML = ('Wall A (' + $('#metricsA .width')[0].value + '"x' + $('#metricsA .height')[0].value + '")');
+		$('#design .mid button')[1].innerHTML = ('Wall B (' + $('#metricsB .width')[0].value + '"x' + $('#metricsB .height')[0].value + '")');
+		$('#design .mid button')[2].innerHTML = ('Wall C (' + $('#metricsC .width')[0].value + '"x' + $('#metricsC .height')[0].value + '")');
+	}
+	$('.grid > div').html ('');
+	if (configSelected == 'reach-in') {
+		$('.wall' + $('#design .mid .btbg')[0].value).show ();
+		$('#design .intro').html ('You are ready to start designing; click and drag your accessories onto the grid below.');
+		$('.mid button:first-child').click ();
+		$('.mid').hide ();
+		drawCanvas ('R', 1);
+	} else {
+		$('.wallR').show ();
+		$('#design .intro').html ('You are ready to start designing; click and drag your accessories onto the grids of walls A,B,C.');
+		$('.mid button')[1].click ();
+		$('.mid').show ();
+		drawCanvas ('A', 0);
+		drawCanvas ('B', 1); // B is visible
+		drawCanvas ('C', 0);
+	}
+	loadCanvasEvents (); // load events
+	$('#design').show ();
 }
 
 function initButtonBar () {
@@ -917,30 +1080,7 @@ function initButtonBar () {
 	});
 	$('#walk-in .next, #reach-in .next').on ('click', function () {
 		$(this).closest ('.outer').hide ();
-		if (configSelected == 'walk-in') {
-			$('#design .mid button')[0].innerHTML = ('Wall A (' + $('#metricsA .width')[0].value + '"x' + $('#metricsA .height')[0].value + '")');
-			$('#design .mid button')[1].innerHTML = ('Wall B (' + $('#metricsB .width')[0].value + '"x' + $('#metricsB .height')[0].value + '")');
-			$('#design .mid button')[2].innerHTML = ('Wall C (' + $('#metricsC .width')[0].value + '"x' + $('#metricsC .height')[0].value + '")');
-		}
-		$('.grid > div').html ('');
-		if (configSelected == 'reach-in') {
-			$('#design .intro').html ('You are ready to start designing; click and drag your accessories onto the grid below.');
-			$('.mid button:first-child').click ();
-			$('.mid').hide ();
-			drawCanvas ('R', 1);
-		} else {
-			$('#design .intro').html ('You are ready to start designing; click and drag your accessories onto the grids of walls A,B,C.');
-			$('.mid button')[1].click ();
-			$('.mid').show ();
-			drawCanvas ('A', 0);
-			drawCanvas ('B', 1); // B is visible
-			drawCanvas ('C', 0);
-		}
-		$('.preview').remove ();
-		loadCanvasEvents ();
-		$('#design').show ();
-		var currWall = (configSelected == 'reach-in' ? 'R' : $('#design .mid .btbg')[0].value);
-		$('.wall' + currWall).show ();
+		showDesigner ();
 	});
 	$('#design .prev').on ('click', function () {
 		$(this).closest ('.outer').hide ();
@@ -954,6 +1094,44 @@ function initButtonBar () {
 		$(this).closest ('.outer').hide ();
 		$('#shopping_list').show ();
 	});
+	$('#design .save').on ('click', function () {
+		$('#dialog-modal p').html ('Enter your email address to save your progress. We\'ll email you a link so you can access this page again in future.<br /><br /><form><label for="saveEmail">Email Address</label><br /><input type="email" id="saveEmail" style="width: 80%" class="text ui-widget-content ui-corner-all" /></form>').keypress (function (e) {
+			var charCode = e.charCode || e.keyCode;
+			if (charCode  == 13) {
+				return false;
+			}
+		});
+		$('#dialog-modal').dialog ({
+			modal: true, 
+			buttons: {
+				"Save": function () {
+					if ($('#saveEmail').val () == '') {
+						$('#saveEmail').css ('border', '1px solid red'); $('#saveEmail').focus (); return false;
+					}
+					saveWalls ();
+					$.post ('save.php', { json: JSON.stringify (savedWalls), action: 'saveProgress', recipient: $('#saveEmail').val () }).done (function (data) {
+						$('#dialog-modal').dialog ('close');
+						$('#dialog-modal p').html ('Your progress has been saved. Copy this link and use it whenever you need to access this page.<br /><br /><form><input type="text" id="savedLink" style="width: 80%" class="text ui-widget-content ui-corner-all" value="' + data + '" /></form>');
+						$('#dialog-modal').dialog ({
+							modal: true, 
+							buttons: {
+								"Close": function () {
+									$(this).dialog ('close');
+								}
+							},
+							position: 'center',
+							title: 'Progress Saved'
+						});
+					});
+				},
+				"Cancel": function () {
+					$(this).dialog ('close');
+				}
+			},
+			position: 'center',
+			title: 'Save Your Progress'
+		});
+	});
 	$('#shopping_list .prev').on ('click', function () {
 		var currWall = (configSelected == 'reach-in' ? 'R' : $('.mid .btbg')[0].value);
 		$(this).closest ('.outer').hide ();
@@ -961,12 +1139,48 @@ function initButtonBar () {
 		$('#design').show ();
 	});
 	$('#shopping_list .save').on ('click', function () {
-		$.post ('save.php', { json: JSON.stringify (savedWalls) }).done (function (data) {
-			window.open ('render.php?id=' + data);
+		saveWalls ();
+		$.post ('save.php', { json: JSON.stringify (savedWalls), action: 'saveQuote' }).done (function (data) {
+			window.open (data);
 		});
 	});
 	$('#shopping_list .retail').on ('click', function () {
-		window.open ('http://www.evoliacloset.com/design-center/retailers.html');
+		$('#dialog-modal p').html ('Enter your name and email address, and we\'ll send your quote via email.<br /><br /><form><label for="quoteName">Full Name</label><br /><input type="text" id="quoteName" style="width: 80%" class="text ui-widget-content ui-corner-all" /><br /><label for="quoteEmail">Email Address</label><br /><input type="email" id="quoteEmail" style="width: 80%" class="text ui-widget-content ui-corner-all" /></form>').keypress (function (e) {
+			var charCode = e.charCode || e.keyCode;
+			if (charCode  == 13) {
+				return false;
+			}
+		});
+		$('#dialog-modal').dialog ({
+			modal: true, 
+			buttons: {
+				"Send Quote": function () {
+					if ($('#quoteEmail').val () == '') {
+						$('#quoteEmail').css ('border', '1px solid red'); $('#quoteEmail').focus (); return false;
+					}
+					// Don't resave walls
+					$.post ('save.php', { json: JSON.stringify (savedWalls), action: 'sendQuote', recipient: $('#quoteEmail').val (), name: $('#quoteName').val () }).done (function (data) {
+						$('#dialog-modal').dialog ('close');
+						$('#dialog-modal p').html ('Thank you, your quote has been emailed to the address you supplied.');
+						$('#dialog-modal').dialog ({
+							modal: true, 
+							buttons: {
+								"Close": function () {
+									$(this).dialog ('close');
+								}
+							},
+							position: 'center',
+							title: 'Thank You'
+						});
+					});
+				},
+				"Cancel": function () {
+					$(this).dialog ('close');
+				}
+			},
+			position: 'center',
+			title: 'Get a Quote'
+		});
 	});
 }
 
@@ -1014,52 +1228,7 @@ $(document).ready(function () {
 	$('#design .mid button').on ('click', function () {
 		var currWall = $('#design .mid .btbg')[0].value;
 		var nextWall = $(this)[0].value;
-		//--- Save boundary tests so we don't need to look it up later
-		switch (currWall) {
-			case 'A':	//--- Save right side only
-						wallBoundaryTests[currWall] = [false, false];
-						$('.preview.wall' + currWall).each (function () {
-							if ($(this).offset ().left + $(this).width () > $('#plotoverlay' + currWall).offset ().left + $('#plotoverlay' + currWall).width () + 5 - (16 * 4.5)) {
-								if ($.isArray (wallBoundaryTests[currWall][1])) {
-									wallBoundaryTests[currWall][1].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
-								} else {
-									wallBoundaryTests[currWall][1] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
-								}
-							}
-						});
-						break;
-			case 'B':	//--- Save both left and right side
-						wallBoundaryTests[currWall] = [false, false];
-						$('.preview.wall' + currWall).each (function () {
-							if ($(this).offset ().left < $('#plotoverlay' + currWall).offset ().left + 5 + (16 * 4.5)) {
-								if ($.isArray (wallBoundaryTests[currWall][0])) {
-									wallBoundaryTests[currWall][0].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
-								} else {
-									wallBoundaryTests[currWall][0] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
-								}								
-							}
-							if ($(this).offset ().left + $(this).width () > $('#plotoverlay' + currWall).offset ().left + $('#plotoverlay' + currWall).width () + 5 - (16 * 4.5)) {
-								if ($.isArray (wallBoundaryTests[currWall][1])) {
-									wallBoundaryTests[currWall][1].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
-								} else {
-									wallBoundaryTests[currWall][1] =  [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
-								}
-							}
-						});
-						break;
-			case 'C':	//--- Save left of C
-						wallBoundaryTests[currWall] = [false, false];
-						$('.preview.wall' + currWall).each (function () {
-							if ($(this).offset ().left < $('#plotoverlay' + currWall).offset ().left + 5 + (16 * 4.5)) {
-								if ($.isArray (wallBoundaryTests[currWall][0])) {
-									wallBoundaryTests[currWall][0].push ([$(this).offset ().top, $(this).offset ().top + $(this).height ()]);
-								} else {
-									wallBoundaryTests[currWall][0] = [[$(this).offset ().top, $(this).offset ().top + $(this).height ()]];
-								}
-							}
-						});
-						break;
-		}
+		saveWallBoundaries (currWall);
 		$('#plot' + currWall).hide ();
 		$('#plotoverlay' + currWall).hide ();
 		$('#plot' + nextWall).show ();
